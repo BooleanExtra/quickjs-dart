@@ -75,9 +75,9 @@ jobs:
       shell: bash
       run: |
         if [[ "${{ matrix.os }}" == "windows" ]]; then
-          # Add the MinGW sysroot lib to the search path so libwinpthread.a is found
-          SYSROOT=$(gcc -print-sysroot 2>/dev/null || echo "/c/mingw64/x86_64-w64-mingw32")
-          LDFLAGS="-static-libgcc -L${SYSROOT}/lib -Wl,-Bstatic,-lwinpthread,-Bdynamic"
+          # /c/mingw64/x86_64-w64-mingw32/lib has libwinpthread.a (static archive)
+          # The sysroot baked into the compiler points to the build machine, not the runner
+          LDFLAGS="-static-libgcc -L/c/mingw64/x86_64-w64-mingw32/lib -Wl,-Bstatic,-lwinpthread,-Bdynamic"
         elif [[ "${{ matrix.os }}" == "macos" ]]; then
           LDFLAGS="-Wl,-headerpad_max_install_names"
         else
