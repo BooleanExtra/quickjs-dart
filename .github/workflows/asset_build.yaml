@@ -74,6 +74,7 @@ jobs:
       if: ${{ matrix.os != 'linux'}}
       env:
         LDEXPORT: ${{ matrix.os == 'macos' && '-Wl,-headerpad_max_install_names' || (matrix.os == 'windows' && '-static-libgcc -Wl,-Bstatic,-lpthread,-Bdynamic' || '') }}
+      shell: bash
       run: |
         make -j libquickjs.so LDFLAGS="$LDEXPORT"
 
