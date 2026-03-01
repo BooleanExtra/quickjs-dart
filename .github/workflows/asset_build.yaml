@@ -75,15 +75,26 @@ jobs:
       shell: bash
       run: |
         if [[ "${{ matrix.os }}" == "windows" ]]; then
-          # /c/mingw64/x86_64-w64-mingw32/lib has libwinpthread.a (static archive)
-          # The sysroot baked into the compiler points to the build machine, not the runner
-          LDFLAGS="-static-libgcc -L/c/mingw64/x86_64-w64-mingw32/lib -Wl,-Bstatic,-lwinpthread,-Bdynamic"
+          # Find libwinpthread.a — its location varies by MinGW distribution
+          WINPTHREAD_A=$(find /c/mingw64 -name 'libwinpthread.a' 2>/dev/null | grep -v debug | head -1)
+          echo "gcc: $(which gcc) ($(gcc --version | head -1))"
+          echo "libwinpthread.a: ${WINPTHREAD_A:-(not found)}"
+          ls /c/mingw64/lib/libwinpthread* /c/mingw64/x86_64-w64-mingw32/lib/libwinpthread* 2>/dev/null || true
+          if [ -n "$WINPTHREAD_A" ]; then
+            # --whole-archive ensures all pthread symbols are pulled from the static
+            # archive before gcc's implicit -lwinpthread can link the DLL import stub
+            LDFLAGS="-static-libgcc -Wl,--whole-archive,$WINPTHREAD_A,--no-whole-archive"
+          else
+            LDFLAGS="-static-libgcc"
+          fi
         elif [[ "${{ matrix.os }}" == "macos" ]]; then
           LDFLAGS="-Wl,-headerpad_max_install_names"
         else
           LDFLAGS=""
         fi
         make -j libquickjs.so LDFLAGS="$LDFLAGS"
+        echo "=== DLL imports after build ==="
+        objdump -p libquickjs.so | grep "DLL Name" || true
 
     - name: Rename assets
       if: ${{ matrix.os != 'windows'}}
