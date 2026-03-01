@@ -91,6 +91,20 @@ jobs:
         move "lib-src\libquickjs.so" "assets\quickjs-${{ matrix.os }}-${{ matrix.arch }}.dll"
         ls .
 
+    - name: Bundle MinGW runtime DLLs (Windows x64 only)
+      if: ${{ matrix.os == 'windows' && matrix.arch == 'x64' }}
+      shell: bash
+      run: |
+        # Compile libwinpthread stub — provides all pthread/clock functions
+        # needed by quickjs and libgcc without depending on system MinGW runtime
+        gcc -shared -o assets/libwinpthread-1.dll tool/libwinpthread_stub.c \
+          -nostdlib -lkernel32 -Wl,--kill-at
+        # Copy libgcc_s_seh-1.dll from the same gcc that compiled quickjs
+        GCC_DIR=$(dirname "$(which gcc)")
+        cp "$GCC_DIR/libgcc_s_seh-1.dll" assets/
+        echo "Bundled runtime DLLs:"
+        ls -la assets/libgcc_s_seh-1.dll assets/libwinpthread-1.dll
+
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
