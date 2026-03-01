@@ -72,11 +72,18 @@ jobs:
     - name: Build ${{ matrix.os }}-${{ matrix.arch }} host
       working-directory: lib-src
       if: ${{ matrix.os != 'linux'}}
-      env:
-        LDEXPORT: ${{ matrix.os == 'macos' && '-Wl,-headerpad_max_install_names' || (matrix.os == 'windows' && '-static-libgcc -Wl,-Bstatic,-lpthread,-Bdynamic' || '') }}
       shell: bash
       run: |
-        make -j libquickjs.so LDFLAGS="$LDEXPORT"
+        if [[ "${{ matrix.os }}" == "windows" ]]; then
+          # Add the MinGW sysroot lib to the search path so libwinpthread.a is found
+          SYSROOT=$(gcc -print-sysroot 2>/dev/null || echo "/c/mingw64/x86_64-w64-mingw32")
+          LDFLAGS="-static-libgcc -L${SYSROOT}/lib -Wl,-Bstatic,-lwinpthread,-Bdynamic"
+        elif [[ "${{ matrix.os }}" == "macos" ]]; then
+          LDFLAGS="-Wl,-headerpad_max_install_names"
+        else
+          LDFLAGS=""
+        fi
+        make -j libquickjs.so LDFLAGS="$LDFLAGS"
 
     - name: Rename assets
       if: ${{ matrix.os != 'windows'}}
